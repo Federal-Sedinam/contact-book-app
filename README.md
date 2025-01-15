@@ -1,1 +1,1 @@
-Will be updated shortly🙂‍↕️
+This project is a basic contact book which is widely used and found on phones, computers and some other smart devices that allows users to store and manage the contact information of their family and friends. The application supports essential features such as adding, viewing and deleting contact details
