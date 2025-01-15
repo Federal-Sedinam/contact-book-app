@@ -1,7 +1,7 @@
-from textual.app import App
+from textual.app import App, on 
 from textual.containers import Grid, Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Label, DataTable, Static
+from textual.widgets import Button, Footer, Header, Label, DataTable, Static, Input
 
 class ContactsApp(App):
     CSS_PATH = "contactbook.tcss"
@@ -12,6 +12,10 @@ class ContactsApp(App):
         ("c", "clear_all", "Clear All"),
         ("q", "request_quit", "Quit"),
     ]
+
+    def __init__(self, db):
+        super().__init__()
+        self.db = db
 
     def compose(self):
         yield Header()
@@ -35,6 +39,13 @@ class ContactsApp(App):
     def on_mount(self):
         self.title = "RP Contacts"
         self.sub_title = "A Contacts Book App With Textual And Python"
+        self._load_contacts()
+
+    def _load_contacts(self):
+        contacts_list = self.query_one(DataTable)
+        for contact_data in self.db.get_all_contacts():
+            id, *contact = contact_data
+            contacts_list.add_row(*contact, key=id)
 
     def action_toggle_dark(self):
         return super().action_toggle_dark()
@@ -45,6 +56,16 @@ class ContactsApp(App):
                 self.exit()
         
         self.push_screen(QuestionDialog("Do you want to quit?"), check_answer)
+
+    @on(Button.Pressed, "#add")
+    def action_add(self):
+        def check_contact(contact_data):
+            if contact_data:
+                self.db.add_contact(contact_data)
+                id, *contact = self.db.get_last_contact()
+                self.query_one(DataTable).add_row(*contact, key=id)
+
+        self.push_screen(InputDialog(), check_contact)
     
 class QuestionDialog(Screen):
     def __init__(self, message, *args, **kwargs):
@@ -67,3 +88,40 @@ class QuestionDialog(Screen):
             self.dismiss(True)
         else:
             self.dismiss(False)
+
+class InputDialog(Screen):
+    def compose(self):
+        yield Grid(
+            Label("Add Contact", id="title"),
+            Label("Name:", classes="label"),
+            Input(
+                placeholder="Contact Name",
+                classes="input",
+                id="name",
+            ),
+            Label("Phone:", classes="label"),
+            Input(
+                placeholder="Contact Phone",
+                classes="input",
+                id="phone",
+            ),
+            Label("Email:", classes="label"),
+            Input(
+                placeholder="Contact Email",
+                classes="input",
+                id="email",
+            ),
+            Static(),
+            Button("Cancel", variant="warning", id="cancel"),
+            Button("Ok", variant="success", id="ok"),
+            id="input-dialog",
+        )
+
+    def on_button_pressed(self, event):
+        if event.button.id == "ok":
+            name = self.query_one("#name", Input).value
+            phone = self.query_one("#phone", Input).value
+            email = self.query_one("#email", Input).value
+            self.dismiss((name, phone, email))
+        else:
+            self.dismiss(())
